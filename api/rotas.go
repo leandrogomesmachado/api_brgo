@@ -3,5 +3,14 @@
 
 package api
 
+import (
+	"net/http"
+)
+
+// ConfigurarRotas returns an HTTP handler that configures all API routes
 // The actual implementation is in the .brgo files
-// This file exists to make the Go module system work with our custom extensions
+func ConfigurarRotas() http.Handler {
+	// This is just a stub - the real implementation is in rotas.brgo
+	// This definition is here only to satisfy the Go compiler
+	return nil
+}
