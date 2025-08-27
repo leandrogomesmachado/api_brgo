@@ -1,0 +1,81 @@
+pacote models
+
+importa (
+	"database/sql"
+	"time"
+)
+
+tipo User estrutura {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Password  string    `json:"-"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+tipo Product estrutura {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Price       float64   `json:"price"`
+	Stock       int       `json:"stock"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+tipo Delivery estrutura {
+	ID         int64     `json:"id"`
+	UserID     int64     `json:"user_id"`
+	ProductID  int64     `json:"product_id"`
+	Quantity   int       `json:"quantity"`
+	Address    string    `json:"address"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	DeliveryAt time.Time `json:"delivery_at"`
+}
+
+func MigrateDB(db *sql.DB) error {
+	queries := []string{
+		`CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			password TEXT NOT NULL,
+			email TEXT NOT NULL UNIQUE,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS products (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL,
+			price REAL NOT NULL,
+			stock INTEGER NOT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS deliveries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			product_id INTEGER NOT NULL,
+			quantity INTEGER NOT NULL,
+			address TEXT NOT NULL,
+			status TEXT NOT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			delivery_at DATETIME NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users (id),
+			FOREIGN KEY (product_id) REFERENCES products (id)
+		)`,
+	}
+
+	para _, query := intervalo queries {
+		_, err := db.Exec(query)
+		se err != nulo {
+			retorna err
+		}
+	}
+
+	retorna nulo
+}

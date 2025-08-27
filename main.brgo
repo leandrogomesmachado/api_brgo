@@ -1,0 +1,80 @@
+pacote principal
+
+importa (
+	"database/sql"
+	"log"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/user/api_brgo/handlers"
+	"github.com/user/api_brgo/middleware"
+	"github.com/user/api_brgo/models"
+)
+
+func principal() {
+	db, err := setupDatabase()
+	se err != nulo {
+		log.Fatalf("Failed to set up database: %v", err)
+	}
+	adia db.Close()
+
+	router := gin.Default()
+
+	api := router.Group("/api")
+	{
+		api.POST("/login", handlers.Login(db))
+		api.POST("/register", handlers.Register(db))
+
+		authorized := api.Group("/")
+		authorized.Use(middleware.JWTAuth())
+		{
+			users := authorized.Group("/usuarios")
+			{
+				users.GET("/", handlers.GetAllUsers(db))
+				users.GET("/:id", handlers.GetUser(db))
+				users.PUT("/:id", handlers.UpdateUser(db))
+				users.DELETE("/:id", handlers.DeleteUser(db))
+			}
+
+			products := authorized.Group("/produtos")
+			{
+				products.GET("/", handlers.GetAllProducts(db))
+				products.GET("/:id", handlers.GetProduct(db))
+				products.POST("/", handlers.CreateProduct(db))
+				products.PUT("/:id", handlers.UpdateProduct(db))
+				products.DELETE("/:id", handlers.DeleteProduct(db))
+			}
+
+			deliveries := authorized.Group("/entregas")
+			{
+				deliveries.GET("/", handlers.GetAllDeliveries(db))
+				deliveries.GET("/:id", handlers.GetDelivery(db))
+				deliveries.POST("/", handlers.CreateDelivery(db))
+				deliveries.PUT("/:id", handlers.UpdateDelivery(db))
+				deliveries.DELETE("/:id", handlers.DeleteDelivery(db))
+			}
+		}
+	}
+
+	port := os.Getenv("PORT")
+	se port == "" {
+		port = "8080"
+	}
+	router.Run(":" + port)
+}
+
+func setupDatabase() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./api.db")
+	se err != nulo {
+		retorna nulo, err
+	}
+
+	se err := models.MigrateDB(db); err != nulo {
+		retorna nulo, err
+	}
+
+	retorna db, nulo
+}

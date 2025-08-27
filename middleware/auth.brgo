@@ -1,0 +1,79 @@
+pacote middleware
+
+importa (
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	SecretKey = "super-secret-key-change-in-production"
+)
+
+func JWTAuth() gin.HandlerFunc {
+	retorna func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		se authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header is required"})
+			c.Abort()
+			retorna
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		se !(comprimento(parts) == 2 && parts[0] == "Bearer") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header format"})
+			c.Abort()
+			retorna
+		}
+
+		tokenString := parts[1]
+		claims := jwt.MapClaims{}
+
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			retorna []byte(SecretKey), nulo
+		})
+
+		se err != nulo || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			c.Abort()
+			retorna
+		}
+
+		expFloat, ok := claims["exp"].(float64)
+		se !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+			c.Abort()
+			retorna
+		}
+
+		expTime := time.Unix(int64(expFloat), 0)
+		se time.Now().After(expTime) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
+			c.Abort()
+			retorna
+		}
+
+		userID, ok := claims["user_id"].(float64)
+		se !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id in token"})
+			c.Abort()
+			retorna
+		}
+
+		c.Set("user_id", int64(userID))
+		c.Next()
+	}
+}
+
+func GenerateToken(userID int64) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	retorna token.SignedString([]byte(SecretKey))
+}
