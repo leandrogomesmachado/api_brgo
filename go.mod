@@ -1,4 +1,4 @@
-module brgo
+module github.com/leandrogomesmachado/api_brgo
 
 go 1.24.4
 
