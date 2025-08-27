@@ -1,0 +1,21 @@
+pacote principal
+
+importa (
+    "fmt"
+    "net/http"
+    "log"
+    "github.com/leandrogomesmachado/api_brgo/api"
+)
+
+func principal() {
+    porta := ":8080"
+    
+    fmt.Println("Servidor iniciando na porta", porta)
+    
+    roteador := api.ConfigurarRotas()
+    
+    erro := http.ListenAndServe(porta, roteador)
+    se erro != nulo {
+        log.Fatal("Erro ao iniciar servidor:", erro)
+    }
+}

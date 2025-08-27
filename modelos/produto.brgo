@@ -1,0 +1,15 @@
+pacote modelos
+
+importa (
+    "time"
+)
+
+tipo Produto estrutura {
+    ID          string    `json:"id"`
+    Nome        string    `json:"nome"`
+    Descricao   string    `json:"descricao"`
+    Preco       float64   `json:"preco"`
+    Estoque     int       `json:"estoque"`
+    CriadoEm    time.Time `json:"criadoEm"`
+    AtualizadoEm time.Time `json:"atualizadoEm"`
+}

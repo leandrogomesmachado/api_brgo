@@ -1,0 +1,156 @@
+pacote api
+
+importa (
+    "encoding/json"
+    "net/http"
+    "time"
+    "github.com/google/uuid"
+    "github.com/leandrogomesmachado/api_brgo/modelos"
+    "github.com/leandrogomesmachado/api_brgo/armazenamento"
+)
+
+tipo GerenciadorProdutos estrutura {
+    armazenamento *armazenamento.ArquivoArmazenamento
+}
+
+func NovoGerenciadorProdutos(armazenamento *armazenamento.ArquivoArmazenamento) *GerenciadorProdutos {
+    retorna &GerenciadorProdutos{
+        armazenamento: armazenamento,
+    }
+}
+
+func (g *GerenciadorProdutos) CriarProduto(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "POST" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var produto modelos.Produto
+    erro := json.NewDecoder(r.Body).Decode(&produto)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    produto.ID = uuid.New().String()
+    produto.CriadoEm = time.Now()
+    produto.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.SalvarItem("produtos", produto.ID, &produto)
+    se erro != nulo {
+        http.Error(w, "Erro ao salvar produto: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(produto)
+}
+
+func (g *GerenciadorProdutos) ObterProdutos(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var produtos []modelos.Produto
+    erro := g.armazenamento.ListarItens("produtos", &produtos)
+    se erro != nulo {
+        http.Error(w, "Erro ao listar produtos: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(produtos)
+}
+
+func (g *GerenciadorProdutos) ObterProduto(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de produto não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var produto modelos.Produto
+    erro := g.armazenamento.ObterItem("produtos", id, &produto)
+    se erro != nulo {
+        http.Error(w, "Erro ao obter produto: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(produto)
+}
+
+func (g *GerenciadorProdutos) AtualizarProduto(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "PUT" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de produto não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var produtoExistente modelos.Produto
+    erro := g.armazenamento.ObterItem("produtos", id, &produtoExistente)
+    se erro != nulo {
+        http.Error(w, "Produto não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    var produtoAtualizado modelos.Produto
+    erro = json.NewDecoder(r.Body).Decode(&produtoAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    produtoAtualizado.ID = id
+    produtoAtualizado.CriadoEm = produtoExistente.CriadoEm
+    produtoAtualizado.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.AtualizarItem("produtos", id, &produtoAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao atualizar produto: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(produtoAtualizado)
+}
+
+func (g *GerenciadorProdutos) DeletarProduto(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "DELETE" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de produto não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var produto modelos.Produto
+    erro := g.armazenamento.ObterItem("produtos", id, &produto)
+    se erro != nulo {
+        http.Error(w, "Produto não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    erro = g.armazenamento.DeletarItem("produtos", id)
+    se erro != nulo {
+        http.Error(w, "Erro ao deletar produto: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.WriteHeader(http.StatusNoContent)
+}

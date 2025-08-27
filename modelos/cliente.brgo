@@ -1,0 +1,15 @@
+pacote modelos
+
+importa (
+    "time"
+)
+
+tipo Cliente estrutura {
+    ID        string    `json:"id"`
+    Nome      string    `json:"nome"`
+    Email     string    `json:"email"`
+    Telefone  string    `json:"telefone"`
+    Endereco  string    `json:"endereco"`
+    CriadoEm  time.Time `json:"criadoEm"`
+    AtualizadoEm time.Time `json:"atualizadoEm"`
+}

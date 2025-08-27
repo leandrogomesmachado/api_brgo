@@ -1,0 +1,156 @@
+pacote api
+
+importa (
+    "encoding/json"
+    "net/http"
+    "time"
+    "github.com/google/uuid"
+    "github.com/leandrogomesmachado/api_brgo/modelos"
+    "github.com/leandrogomesmachado/api_brgo/armazenamento"
+)
+
+tipo GerenciadorUsuarios estrutura {
+    armazenamento *armazenamento.ArquivoArmazenamento
+}
+
+func NovoGerenciadorUsuarios(armazenamento *armazenamento.ArquivoArmazenamento) *GerenciadorUsuarios {
+    retorna &GerenciadorUsuarios{
+        armazenamento: armazenamento,
+    }
+}
+
+func (g *GerenciadorUsuarios) CriarUsuario(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "POST" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var usuario modelos.Usuario
+    erro := json.NewDecoder(r.Body).Decode(&usuario)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    usuario.ID = uuid.New().String()
+    usuario.CriadoEm = time.Now()
+    usuario.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.SalvarItem("usuarios", usuario.ID, &usuario)
+    se erro != nulo {
+        http.Error(w, "Erro ao salvar usuário: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(usuario)
+}
+
+func (g *GerenciadorUsuarios) ObterUsuarios(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var usuarios []modelos.Usuario
+    erro := g.armazenamento.ListarItens("usuarios", &usuarios)
+    se erro != nulo {
+        http.Error(w, "Erro ao listar usuários: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(usuarios)
+}
+
+func (g *GerenciadorUsuarios) ObterUsuario(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de usuário não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var usuario modelos.Usuario
+    erro := g.armazenamento.ObterItem("usuarios", id, &usuario)
+    se erro != nulo {
+        http.Error(w, "Erro ao obter usuário: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(usuario)
+}
+
+func (g *GerenciadorUsuarios) AtualizarUsuario(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "PUT" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de usuário não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var usuarioExistente modelos.Usuario
+    erro := g.armazenamento.ObterItem("usuarios", id, &usuarioExistente)
+    se erro != nulo {
+        http.Error(w, "Usuário não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    var usuarioAtualizado modelos.Usuario
+    erro = json.NewDecoder(r.Body).Decode(&usuarioAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    usuarioAtualizado.ID = id
+    usuarioAtualizado.CriadoEm = usuarioExistente.CriadoEm
+    usuarioAtualizado.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.AtualizarItem("usuarios", id, &usuarioAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao atualizar usuário: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(usuarioAtualizado)
+}
+
+func (g *GerenciadorUsuarios) DeletarUsuario(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "DELETE" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de usuário não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var usuario modelos.Usuario
+    erro := g.armazenamento.ObterItem("usuarios", id, &usuario)
+    se erro != nulo {
+        http.Error(w, "Usuário não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    erro = g.armazenamento.DeletarItem("usuarios", id)
+    se erro != nulo {
+        http.Error(w, "Erro ao deletar usuário: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.WriteHeader(http.StatusNoContent)
+}

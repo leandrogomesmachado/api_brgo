@@ -1,0 +1,109 @@
+pacote api
+
+importa (
+    "fmt"
+    "net/http"
+    "github.com/leandrogomesmachado/api_brgo/armazenamento"
+)
+
+func ConfigurarRotas() http.Handler {
+    arquivoArmazenamento, erro := armazenamento.NovoArmazenamentoArquivo("./dados")
+    se erro != nulo {
+        fmt.Println("Erro ao inicializar armazenamento:", erro)
+    }
+
+    gerenciadorUsuarios := NovoGerenciadorUsuarios(arquivoArmazenamento)
+    gerenciadorClientes := NovoGerenciadorClientes(arquivoArmazenamento)
+    gerenciadorProdutos := NovoGerenciadorProdutos(arquivoArmazenamento)
+
+    mux := http.NewServeMux()
+
+    // Rotas para Usuários
+    mux.HandleFunc("/api/usuarios", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorUsuarios.ObterUsuarios(w, r)
+        caso "POST":
+            gerenciadorUsuarios.CriarUsuario(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    mux.HandleFunc("/api/usuarios/", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorUsuarios.ObterUsuario(w, r)
+        caso "PUT":
+            gerenciadorUsuarios.AtualizarUsuario(w, r)
+        caso "DELETE":
+            gerenciadorUsuarios.DeletarUsuario(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    // Rotas para Clientes
+    mux.HandleFunc("/api/clientes", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorClientes.ObterClientes(w, r)
+        caso "POST":
+            gerenciadorClientes.CriarCliente(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    mux.HandleFunc("/api/clientes/", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorClientes.ObterCliente(w, r)
+        caso "PUT":
+            gerenciadorClientes.AtualizarCliente(w, r)
+        caso "DELETE":
+            gerenciadorClientes.DeletarCliente(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    // Rotas para Produtos
+    mux.HandleFunc("/api/produtos", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorProdutos.ObterProdutos(w, r)
+        caso "POST":
+            gerenciadorProdutos.CriarProduto(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    mux.HandleFunc("/api/produtos/", func(w http.ResponseWriter, r *http.Request) {
+        escolhe r.Method {
+        caso "GET":
+            gerenciadorProdutos.ObterProduto(w, r)
+        caso "PUT":
+            gerenciadorProdutos.AtualizarProduto(w, r)
+        caso "DELETE":
+            gerenciadorProdutos.DeletarProduto(w, r)
+        padrao:
+            http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        }
+    })
+
+    // Middleware para CORS
+    retorna http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+        se r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            retorna
+        }
+
+        mux.ServeHTTP(w, r)
+    })
+}

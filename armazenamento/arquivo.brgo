@@ -1,0 +1,119 @@
+pacote armazenamento
+
+importa (
+    "encoding/json"
+    "fmt"
+    "io/ioutil"
+    "os"
+    "path/filepath"
+    "sync"
+)
+
+tipo ArquivoArmazenamento estrutura {
+    diretorioBase string
+    mutex         sync.RWMutex
+}
+
+func NovoArmazenamentoArquivo(diretorioBase string) (*ArquivoArmazenamento, erro) {
+    diretorio, erro := filepath.Abs(diretorioBase)
+    se erro != nulo {
+        retorna nulo, erro
+    }
+
+    erro = os.MkdirAll(diretorio, 0755)
+    se erro != nulo {
+        retorna nulo, erro
+    }
+
+    retorna &ArquivoArmazenamento{
+        diretorioBase: diretorio,
+    }, nulo
+}
+
+func (a *ArquivoArmazenamento) SalvarItem(colecao string, id string, item interface{}) erro {
+    a.mutex.Lock()
+    adia a.mutex.Unlock()
+
+    diretorioColecao := filepath.Join(a.diretorioBase, colecao)
+    erro := os.MkdirAll(diretorioColecao, 0755)
+    se erro != nulo {
+        retorna erro
+    }
+
+    arquivoJson := filepath.Join(diretorioColecao, fmt.Sprintf("%s.json", id))
+    
+    dados, erro := json.MarshalIndent(item, "", "  ")
+    se erro != nulo {
+        retorna erro
+    }
+
+    retorna ioutil.WriteFile(arquivoJson, dados, 0644)
+}
+
+func (a *ArquivoArmazenamento) ObterItem(colecao string, id string, item interface{}) erro {
+    a.mutex.RLock()
+    adia a.mutex.RUnlock()
+
+    arquivoJson := filepath.Join(a.diretorioBase, colecao, fmt.Sprintf("%s.json", id))
+    
+    dados, erro := ioutil.ReadFile(arquivoJson)
+    se erro != nulo {
+        retorna erro
+    }
+
+    retorna json.Unmarshal(dados, item)
+}
+
+func (a *ArquivoArmazenamento) AtualizarItem(colecao string, id string, item interface{}) erro {
+    retorna a.SalvarItem(colecao, id, item)
+}
+
+func (a *ArquivoArmazenamento) DeletarItem(colecao string, id string) erro {
+    a.mutex.Lock()
+    adia a.mutex.Unlock()
+
+    arquivoJson := filepath.Join(a.diretorioBase, colecao, fmt.Sprintf("%s.json", id))
+    retorna os.Remove(arquivoJson)
+}
+
+func (a *ArquivoArmazenamento) ListarItens(colecao string, destino interface{}) erro {
+    a.mutex.RLock()
+    adia a.mutex.RUnlock()
+
+    diretorioColecao := filepath.Join(a.diretorioBase, colecao)
+    
+    erro := os.MkdirAll(diretorioColecao, 0755)
+    se erro != nulo {
+        retorna erro
+    }
+    
+    arquivos, erro := ioutil.ReadDir(diretorioColecao)
+    se erro != nulo {
+        retorna erro
+    }
+    
+    itens := []interface{}{}
+    
+    para _, arquivo := intervalo arquivos {
+        se !arquivo.IsDir() && filepath.Ext(arquivo.Name()) == ".json" {
+            caminhoArquivo := filepath.Join(diretorioColecao, arquivo.Name())
+            dados, erro := ioutil.ReadFile(caminhoArquivo)
+            se erro != nulo {
+                continua
+            }
+            
+            var item interface{}
+            erro = json.Unmarshal(dados, &item)
+            se erro == nulo {
+                itens = anexa(itens, item)
+            }
+        }
+    }
+    
+    dadosItens, erro := json.Marshal(itens)
+    se erro != nulo {
+        retorna erro
+    }
+    
+    retorna json.Unmarshal(dadosItens, destino)
+}

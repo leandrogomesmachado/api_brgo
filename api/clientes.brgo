@@ -1,0 +1,156 @@
+pacote api
+
+importa (
+    "encoding/json"
+    "net/http"
+    "time"
+    "github.com/google/uuid"
+    "github.com/leandrogomesmachado/api_brgo/modelos"
+    "github.com/leandrogomesmachado/api_brgo/armazenamento"
+)
+
+tipo GerenciadorClientes estrutura {
+    armazenamento *armazenamento.ArquivoArmazenamento
+}
+
+func NovoGerenciadorClientes(armazenamento *armazenamento.ArquivoArmazenamento) *GerenciadorClientes {
+    retorna &GerenciadorClientes{
+        armazenamento: armazenamento,
+    }
+}
+
+func (g *GerenciadorClientes) CriarCliente(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "POST" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var cliente modelos.Cliente
+    erro := json.NewDecoder(r.Body).Decode(&cliente)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    cliente.ID = uuid.New().String()
+    cliente.CriadoEm = time.Now()
+    cliente.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.SalvarItem("clientes", cliente.ID, &cliente)
+    se erro != nulo {
+        http.Error(w, "Erro ao salvar cliente: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(cliente)
+}
+
+func (g *GerenciadorClientes) ObterClientes(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    var clientes []modelos.Cliente
+    erro := g.armazenamento.ListarItens("clientes", &clientes)
+    se erro != nulo {
+        http.Error(w, "Erro ao listar clientes: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(clientes)
+}
+
+func (g *GerenciadorClientes) ObterCliente(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "GET" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de cliente não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var cliente modelos.Cliente
+    erro := g.armazenamento.ObterItem("clientes", id, &cliente)
+    se erro != nulo {
+        http.Error(w, "Erro ao obter cliente: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(cliente)
+}
+
+func (g *GerenciadorClientes) AtualizarCliente(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "PUT" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de cliente não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var clienteExistente modelos.Cliente
+    erro := g.armazenamento.ObterItem("clientes", id, &clienteExistente)
+    se erro != nulo {
+        http.Error(w, "Cliente não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    var clienteAtualizado modelos.Cliente
+    erro = json.NewDecoder(r.Body).Decode(&clienteAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao decodificar JSON: "+erro.Error(), http.StatusBadRequest)
+        retorna
+    }
+
+    clienteAtualizado.ID = id
+    clienteAtualizado.CriadoEm = clienteExistente.CriadoEm
+    clienteAtualizado.AtualizadoEm = time.Now()
+
+    erro = g.armazenamento.AtualizarItem("clientes", id, &clienteAtualizado)
+    se erro != nulo {
+        http.Error(w, "Erro ao atualizar cliente: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(clienteAtualizado)
+}
+
+func (g *GerenciadorClientes) DeletarCliente(w http.ResponseWriter, r *http.Request) {
+    se r.Method != "DELETE" {
+        http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+        retorna
+    }
+
+    id := r.URL.Query().Get("id")
+    se id == "" {
+        http.Error(w, "ID de cliente não fornecido", http.StatusBadRequest)
+        retorna
+    }
+
+    var cliente modelos.Cliente
+    erro := g.armazenamento.ObterItem("clientes", id, &cliente)
+    se erro != nulo {
+        http.Error(w, "Cliente não encontrado: "+erro.Error(), http.StatusNotFound)
+        retorna
+    }
+
+    erro = g.armazenamento.DeletarItem("clientes", id)
+    se erro != nulo {
+        http.Error(w, "Erro ao deletar cliente: "+erro.Error(), http.StatusInternalServerError)
+        retorna
+    }
+
+    w.WriteHeader(http.StatusNoContent)
+}
